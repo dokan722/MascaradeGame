@@ -4,6 +4,7 @@
 #include <QApplication>
 #include <QPushButton>
 #include <QMainWindow>
+#include <iostream>
 
 int main(int argc, char **argv)
 {
@@ -14,5 +15,6 @@ int main(int argc, char **argv)
     g.setStartingWindow(w);
     g.hide();
     w.show();
+    std::cerr << "XDDDDDDD" << std::endl;
     return app.exec();
 }

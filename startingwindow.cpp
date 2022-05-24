@@ -44,4 +44,5 @@ void StartingWindow::startGame()
     //game-startgame
     game->show();
     this->hide();
+    game->startGame();
 }
