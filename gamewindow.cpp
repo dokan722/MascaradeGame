@@ -27,7 +27,8 @@ void GameWindow::startGame()
     std::cerr << "Starting game..." << std::endl;
     player = gameMaster.getHumanPLayer();
     connect(player.get(), SIGNAL(waitForMove(QString, QStringList)), this, SLOT(askForMove(QString, QStringList)));
-    connect(player.get(), SIGNAL(cardRevealed(QVector<int>, QString)), this, SLOT(notify(QVector<int>, QString)));
+    connect(player.get(), SIGNAL(notified(QVector<int>, QString)), this, SLOT(notify(QVector<int>, QString)));
+    gameMaster.setParams(difficulty, numberOfPlayers);
     gameMaster.start();
 }
 

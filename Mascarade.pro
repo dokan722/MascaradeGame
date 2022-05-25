@@ -10,10 +10,12 @@ SOURCES += \
     game.cpp \
     gamewindow.cpp \
     main.cpp \
+    role.cpp \
     startingwindow.cpp
 
 HEADERS += \
     choiceswidget.h \
     game.h \
     gamewindow.h \
+    role.h \
     startingwindow.h
