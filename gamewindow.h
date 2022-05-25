@@ -29,8 +29,8 @@ public:
     void setStartingWindow(StartingWindow &w);
     void startGame();
 public slots:
-    void askForMove();
-    void onCardRevealed(int player, QString card);
+    void askForMove(QString question, QStringList answers);
+    void notify(QVector<int> players, QString message);
 };
 
 #endif // GAMEWINDOW_H

@@ -8,19 +8,19 @@
 class Player
 {
 public:
-    virtual QString saySomething() = 0;
-    virtual void revealCard(int player, QString card) = 0;
+    virtual QString saySomething(QString question, QStringList answers) = 0;
+    virtual void revealCard(QVector<int> player, QString card) = 0;
 };
 
 
 class ComputerPlayer: public Player
 {
 public:
-    QString saySomething() override
+    QString saySomething(QString question, QStringList answers) override
     {
         return "foobar";
     }
-    void revealCard(int, QString) override
+    void revealCard(QVector<int>, QString) override
     {
     }
 };
@@ -30,6 +30,13 @@ class HumanPlayer: public QObject, public Player
 {
     Q_OBJECT
 public:
+    void wake()
+    {
+        mutex.lock();
+        bed.wakeAll();
+        mutex.unlock();
+    }
+
     void setTheMove(QString move)
     {
         mutex.lock();
@@ -38,19 +45,22 @@ public:
         mutex.unlock();
     }
 
-    virtual QString saySomething()
+    virtual QString saySomething(QString question, QStringList answers) override
     {
         mutex.lock();
-        emit waitForMove();
+        emit waitForMove(question, answers);
         bed.wait(&mutex);
         auto ans = std::move(move);
         mutex.unlock();
         return ans;
     }
 
-    void revealCard(int player, QString card) override
+    void revealCard(QVector<int> players, QString card) override
     {
-        emit cardRevealed(player, card);
+        mutex.lock();
+        emit cardRevealed(players, card);
+        bed.wait(&mutex);
+        mutex.unlock();
     }
 
 private:
@@ -59,8 +69,8 @@ private:
     QString move;
 
 signals:
-    void waitForMove();
-    void cardRevealed(int player, QString card);
+    void waitForMove(QString question, QStringList answers);
+    void cardRevealed(QVector<int> players, QString card);
 };
 
 
@@ -77,14 +87,16 @@ public:
         while (true)
         {
             std::cerr << "Waiting for player" << player << std::endl;
-            auto move = players[player]->saySomething();
+            QStringList ans = {"yes", "no"};
+            auto move = players[player]->saySomething("test", ans);
             std::cerr << "Move of player" << player << "=" << move.toStdString();
             if (++player == players.size())
             {
                 player = 0;
                 for (auto p: players)
                 {
-                    p->revealCard(0, "xd");
+                    QVector<int> pl = {1, 2};
+                    p->revealCard(pl, "xd");
                 }
             }
         }

@@ -2,6 +2,7 @@
 #include "startingwindow.h"
 #include <QWidget>
 #include <QInputDialog>
+#include <QMessageBox>
 
 
 GameWindow::GameWindow(QWidget *parent)
@@ -25,22 +26,34 @@ void GameWindow::startGame()
 {
     std::cerr << "Starting game..." << std::endl;
     player = gameMaster.getHumanPLayer();
-    connect(player.get(), SIGNAL(waitForMove()), this, SLOT(askForMove()));
-    connect(player.get(), SIGNAL(cardRevealed(int, QString)), this, SLOT(onCardRevealed(int, QString)));
+    connect(player.get(), SIGNAL(waitForMove(QString, QStringList)), this, SLOT(askForMove(QString, QStringList)));
+    connect(player.get(), SIGNAL(cardRevealed(QVector<int>, QString)), this, SLOT(notify(QVector<int>, QString)));
     gameMaster.start();
 }
 
-void GameWindow::askForMove()
+void GameWindow::askForMove(QString question, QStringList answers)
 {
     bool ok;
-    QString text = QInputDialog::getText(this, tr("QInputDialog::getText()"),
-                                         tr("User name:"), QLineEdit::Normal,
-                                         QDir::home().dirName(), &ok);
+    QString text = QInputDialog::getItem(this, tr("Decyzja"),
+                                         question, answers,
+                                         0, false, &ok);
     player->setTheMove(text);
 }
 
 
-void GameWindow::onCardRevealed(int player, QString card)
+void GameWindow::notify(QVector<int> players, QString message)
 {
-    std::cerr << "Card revealed" << std::endl;
+    QString text = "";
+    if (players.size() > 1)
+        text = "Gracze: ";
+    else
+        text = "Gracz ";
+    for (int i: players)
+        text += QString::number(i) + ", ";
+    text[text.length() - 2] = '.';
+    text += message;
+    QMessageBox msgBox;
+    msgBox.setText(text);
+    msgBox.exec();
+    player->wake();
 }
