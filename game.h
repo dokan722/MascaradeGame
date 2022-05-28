@@ -36,7 +36,7 @@ public:
     virtual QString chooseRoleToPlay() = 0;
     virtual QString answerWithRole() = 0;
     virtual bool questionRole(QString role) = 0;
-    virtual QVector<int> chooseTargets(int numOfTargets) = 0;
+    virtual QVector<int> chooseTargets(int numOfTargets, QVector<int> *possibleTargets = nullptr) = 0;
     virtual void getOtherRole(int playerId, QString role) = 0;
     virtual void playerGetsMoney(int playerId, int amount) = 0;
     virtual void potentialExchange(int playerId1, int playerId2) = 0;
@@ -90,7 +90,7 @@ public:
         return false;
     }
 
-    QVector<int> chooseTargets(int numOfTargets) override
+    QVector<int> chooseTargets(int numOfTargets, QVector<int> *possibleTargets = nullptr) override
     {
         QVector<int> targets;
         for (int i = 0; i < numOfTargets; ++i)
@@ -183,7 +183,7 @@ public:
     QString chooseRoleToPlay() override;
     QString answerWithRole() override {return chooseRoleToPlay();}
     bool questionRole(QString role) override;
-    QVector<int> chooseTargets(int numOfTargets) override;
+    QVector<int> chooseTargets(int numOfTargets, QVector<int> *possibleTargets = nullptr) override;
     void getOtherRole(int playerId, QString role) override;
     void playerGetsMoney(int playerId, int amount) override;
     void potentialExchange(int playerId1, int playerId2) override;
@@ -221,6 +221,7 @@ private:
 public:
     QStringList rolesInPlay;
     QStringList playerRoles;
+    QList<int> playerMoney;
     QString difficulty;
     int numberOfPlayers;
 
@@ -258,6 +259,38 @@ public:
     std::shared_ptr<HumanPlayer> getHumanPLayer()
     {
         return humanPlayer;
+    }
+
+    int mostMoney(int playerId)
+    {
+        int max = 0;
+        for (int i = 0; i < numberOfPlayers; ++i)
+        {
+            if (playerMoney[i] > max && i != playerId)
+                max = playerMoney[i];
+        }
+        return max;
+    }
+
+    QVector<int> richest(int playerId)
+    {
+        int max = mostMoney(playerId);
+        QVector<int> result;
+        for (int i = 0; i < numberOfPlayers; ++i)
+            if (playerMoney[i] == max)
+                result.push_back(i);
+        return result;
+    }
+
+    void addMoney(int playerId, int amount)
+    {
+        playerMoney[playerId] += amount;
+    }
+
+    void transferMoney(int from, int to, int amount)
+    {
+        addMoney(from, -amount);
+        addMoney(to, amount);
     }
 
     void informAllDecision(int playerId, Decision decision, int notTarget = -1)
@@ -308,7 +341,7 @@ public:
         }
     }
 
-private:
+public:
     int current_player = 0;
     std::shared_ptr<HumanPlayer> humanPlayer = std::make_shared<HumanPlayer>();
     QVector<std::shared_ptr<Player>> players;

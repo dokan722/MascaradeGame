@@ -46,18 +46,30 @@ bool HumanPlayer::questionRole(QString role)
     return false;
 }
 
-QVector<int> HumanPlayer::chooseTargets(int numOfTargets)
+QVector<int> HumanPlayer::chooseTargets(int numOfTargets, QVector<int> *possibleTargets)
 {
     QVector<int> targets;
-    QStringList possibleTargets;
-    for (int i = 0; i < gameMaster->numberOfPlayers; ++i)
+    QStringList posTargets;
+    if (possibleTargets == nullptr)
     {
-        if (i != myId)
-            possibleTargets.append(QString::number(i));
+        for (int i = 0; i < gameMaster->numberOfPlayers; ++i)
+        {
+            if (i != myId)
+                posTargets.append(QString::number(i));
+        }
+    }
+    else
+    {
+        for (int i : *possibleTargets)
+        {
+            if (i != myId)
+                posTargets.append(QString::number(i));
+        }
     }
     for (int i = 0; i < numOfTargets; ++i)
     {
-        int target = saySomething("Wybierz cel ", possibleTargets).toInt();
+        int target = saySomething("Wybierz cel ", posTargets).toInt();
+        posTargets.removeAt(target);
         targets.push_back(target);
     }
     return targets;
