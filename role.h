@@ -1,77 +1,92 @@
 #ifndef ROLE_H
 #define ROLE_H
-#include "game.h"
 
+class GameMaster;
 class Role
 {
 protected:
     GameMaster *gameMaster;
 public:
-    Role();
+    Role() {}
     Role(GameMaster *gameMaster) : gameMaster(gameMaster) {}
-    virtual void usePower(int playerId);
+    virtual void usePower(int playerId) = 0;
 };
 
-class Spy : Role
+class Spy : public Role
 {
-    virtual void usePower(int playerId) override;
+    using Role::Role;
+    void usePower(int playerId) override;
 };
 
-class Bishop : Role
+class Bishop : public Role
 {
+    using Role::Role;
     int amount = 2;
-    virtual void usePower(int playerId) override;
+    void usePower(int playerId) override;
 };
 
-class Fool : Role
+class Fool : public Role
 {
+    using Role::Role;
     int amount = 1;
-    virtual void usePower(int playerId) override;
+    void usePower(int playerId) override;
 };
 
-class Inquisitor : Role
+class Inquisitor : public Role
 {
-    virtual void usePower(int playerId) override;
+    using Role::Role;
+    int amount = 4;
+    void usePower(int playerId) override;
 };
 
-class Judge : Role
+class Judge : public Role
 {
-    virtual void usePower(int playerId) override;
+    using Role::Role;
+    void usePower(int playerId) override;
 };
 
-class Peasant : Role
+class Peasant : public Role
 {
-    virtual void usePower(int playerId) override;
+    using Role::Role;
+    void usePower(int playerId) override;
 };
 
-class Queen : Role
+class Queen : public Role
 {
-    virtual void usePower(int playerId) override;
+    using Role::Role;
+    int amount = 2;
+    void usePower(int playerId) override;
 };
 
-class Roi : Role
+class Roi : public Role
 {
-    virtual void usePower(int playerId) override;
+    using Role::Role;
+    int amount = 3;
+    void usePower(int playerId) override;
 };
 
-class Witch : Role
+class Witch : public Role
 {
-    virtual void usePower(int playerId) override;
+    using Role::Role;
+    void usePower(int playerId) override;
 };
 
-class Cheat : Role
+class Cheat : public Role
 {
-    virtual void usePower(int playerId) override;
+    using Role::Role;
+    void usePower(int playerId) override;
 };
 
-class Widow : Role
+class Widow : public Role
 {
-    virtual void usePower(int playerId) override;
+    using Role::Role;
+    void usePower(int playerId) override;
 };
 
-class Thief : Role
+class Thief : public Role
 {
-    virtual void usePower(int playerId) override;
+    using Role::Role;
+    void usePower(int playerId) override;
 };
 
 #endif // ROLE_H

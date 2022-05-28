@@ -69,7 +69,7 @@ QVector<int> HumanPlayer::chooseTargets(int numOfTargets, QVector<int> *possible
     for (int i = 0; i < numOfTargets; ++i)
     {
         int target = saySomething("Wybierz cel ", posTargets).toInt();
-        posTargets.removeAt(target);
+        posTargets.removeOne(QString::number(target));
         targets.push_back(target);
     }
     return targets;
@@ -105,6 +105,11 @@ void HumanPlayer::informDecision(int playerId, Decision dec)
     else if (dec == Decision::USE)
         decision = "zadeklarować rolę";
     notify({playerId}, "zdecydował się " + decision);
+}
+
+void HumanPlayer::informRoleClaim(int playerId, QString role)
+{
+    notify({playerId}, "twierdzi, że jego rola to " + role);
 }
 
 

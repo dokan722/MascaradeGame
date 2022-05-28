@@ -3,6 +3,7 @@
 
 #include <QtCore>
 #include <iostream>
+#include "role.h"
 
 enum Decision
 {
@@ -42,6 +43,7 @@ public:
     virtual void potentialExchange(int playerId1, int playerId2) = 0;
     virtual void cashExchange(int playerId1, int playerId2) = 0;
     virtual void informDecision(int playerId, Decision dec) = 0;
+    virtual void informRoleClaim(int playerId, QString role) = 0;
 };
 
 
@@ -122,6 +124,11 @@ public:
     {
 
     }
+
+    void informRoleClaim(int playerId, QString role) override
+    {
+
+    }
 };
 
 
@@ -189,6 +196,7 @@ public:
     void potentialExchange(int playerId1, int playerId2) override;
     void cashExchange(int playerId1, int playerId2) override;
     void informDecision(int playerId, Decision dec) override;
+    void informRoleClaim(int playerId, QString role) override;
 
 private:
     QMutex mutex;
@@ -218,14 +226,37 @@ private:
         {"Sędzia", "Biskup", "Król", "Błazen", "Królowa", "Wiedźma", "Szpieg", "Wieśniak", "Oszust", "Inkwizytor", "Wdowa"},
         {"Sędzia", "Biskup", "Król", "Błazen", "Królowa", "Złodziej", "Wiedźma", "Szpieg", "Wieśniak", "Oszust", "Inkwizytor", "Wdowa"}
     };
+
+    QMap<QString, std::shared_ptr<Role>> roleInstances;
 public:
     QStringList rolesInPlay;
     QStringList playerRoles;
     QList<int> playerMoney;
     QString difficulty;
     int numberOfPlayers;
+    int bank = 0;
+    int peasants = 0;
+    int winCon = 13;
+    int cheater = -1;
 
     GameMaster(QObject *parent = nullptr);
+
+
+    void createRoleInstances()
+    {
+        roleInstances.insert("Sędzia", std::make_shared<Judge>(this));
+        roleInstances.insert("Biskup", std::make_shared<Bishop>(this));
+        roleInstances.insert("Król", std::make_shared<Roi>(this));
+        roleInstances.insert("Błazen", std::make_shared<Fool>(this));
+        roleInstances.insert("Królowa", std::make_shared<Queen>(this));
+        roleInstances.insert("Złodziej", std::make_shared<Thief>(this));
+        roleInstances.insert("Wiedźma", std::make_shared<Witch>(this));
+        roleInstances.insert("Szpieg", std::make_shared<Spy>(this));
+        roleInstances.insert("Wieśniak", std::make_shared<Peasant>(this));
+        roleInstances.insert("Oszust", std::make_shared<Cheat>(this));
+        roleInstances.insert("Inkwizytor", std::make_shared<Inquisitor>(this));
+        roleInstances.insert("Wdowa", std::make_shared<Widow>(this));
+    }
 
     void setParams(QString diff, int num)
     {
@@ -233,15 +264,17 @@ public:
         numberOfPlayers = num;
         int row = num - 6;
         rolesInPlay = rolesMatrix[row];
-        //std::copy(rolesInPlay.begin(), rolesInPlay.end(), playerRoles);
         playerRoles = rolesInPlay;
+        if (rolesInPlay.contains("Wieśniak"))
+            playerRoles.push_back("Wieśniak");
+        createRoleInstances();
         std::srand ( unsigned ( std::time(0) ) );
         std::random_shuffle(playerRoles.begin(), playerRoles.end());
     }
 
     void run() override
     {
-        int player = 0;
+        int currentPlayer = 0;
         players.push_back(humanPlayer);
         humanPlayer->assign(this, 0);
         for (int i = 1; i < numberOfPlayers; ++i)
@@ -249,11 +282,89 @@ public:
             players.push_back(std::make_shared<ComputerPlayer>());
             players[i]->assign(this, i);
         }
-        while (true)
+        for (int i = 0; i < numberOfPlayers; ++i)
         {
-            humanPlayer->saySomething("takie role", rolesInPlay);
-            humanPlayer->saySomething("takie role wymieszane", playerRoles);
+            informAllRole(i, playerRoles[i]);
+            playerMoney.push_back(6);
         }
+        for (int i = 0; i < 4; ++i)
+        {
+            int targetId = players[i]->chooseTargets(1)[0];
+            players[i]->changeRoles(targetId);
+            informAllPotentialExchange(i, targetId, i);
+        }
+        while (mostMoney() < winCon && noBankrupts())
+        {
+            winCon = 13;
+            auto player = players[currentPlayer];
+            Decision dec = player->chooseMove();
+            informAllDecision(currentPlayer, dec);
+            if (dec == Decision::CHECK)
+            {
+               player->checkSelf();
+            }
+            else if (dec == Decision::CHANGE)
+            {
+                int targetId = player->chooseTargets(1)[0];
+                player->changeRoles(targetId);
+                informAllPotentialExchange(currentPlayer, targetId, currentPlayer);
+            }
+            else if (dec == Decision::USE)
+            {
+                QString chosenRole = player->chooseRoleToPlay();
+                auto candidates = questionAll(chosenRole, currentPlayer);
+                candidates.push_back(currentPlayer);
+                if (candidates.size() > 1)
+                {
+                    for (int i : candidates)
+                    {
+                        informAllRole(i, playerRoles[i]);
+                    }
+                    QVector<int> winners;
+                    QVector<int> losers;
+                    for (int i : candidates)
+                    {
+                        QString role = playerRoles[i];
+                        if (role == chosenRole)
+                            winners.push_back(i);
+                        else
+                            losers.push_back(i);
+                    }
+                    peasants = winners.size();
+                    for (int i : winners)
+                        roleInstances[chosenRole]->usePower(i);
+                    for (int i : losers)
+                    {
+                        informAllMoney(i, -1);
+                        addMoney(i, -1);
+                    }
+                }
+                else
+                    roleInstances[chosenRole]->usePower(currentPlayer);
+            }
+            currentPlayer = (currentPlayer + 1) % numberOfPlayers;
+            printMoney();
+        }
+        if (winCon < 13)
+            humanPlayer->notify({cheater}, "Wygrana");
+        else
+            humanPlayer->notify(richest(), "Wygrana");
+
+    }
+
+    void printMoney()
+    {
+        for (int i = 0; i < numberOfPlayers; ++i)
+            std::cerr << "Player " << i << " money: " << playerMoney[i] << std::endl;
+        std::cerr << "Bank money: " << bank << std::endl;
+    }
+
+    bool noBankrupts()
+    {
+        for (int i = 0; i < numberOfPlayers; ++i)
+            if (playerMoney[i] < 1)
+                return false;
+        return true;
     }
 
     std::shared_ptr<HumanPlayer> getHumanPLayer()
@@ -261,7 +372,7 @@ public:
         return humanPlayer;
     }
 
-    int mostMoney(int playerId)
+    int mostMoney(int playerId = -1)
     {
         int max = 0;
         for (int i = 0; i < numberOfPlayers; ++i)
@@ -272,7 +383,7 @@ public:
         return max;
     }
 
-    QVector<int> richest(int playerId)
+    QVector<int> richest(int playerId = -1)
     {
         int max = mostMoney(playerId);
         QVector<int> result;
@@ -308,13 +419,18 @@ public:
             players[i]->getOtherRole(playerId, role);
     }
 
-    void questionAll(QString role, int notTarget = -1)
+    QVector<int> questionAll(QString role, int notTarget = -1)
     {
+        QVector<int> result;
         for (int i = 0; i < numberOfPlayers; ++i)
         {
             if (i != notTarget)
-                players[i]->questionRole(role);
+            {
+                if (players[i]->questionRole(role))
+                    result.push_back(i);
+            }
         }
+        return result;
     }
 
     void informAllMoney(int playerId, int amount)
@@ -341,8 +457,15 @@ public:
         }
     }
 
+    void informAllClaimRole(int playerId, QString role)
+    {
+        for (int i = 0; i < numberOfPlayers; ++i)
+        {
+            if (i != playerId)
+                players[i]->informRoleClaim(playerId, role);
+        }
+    }
 public:
-    int current_player = 0;
     std::shared_ptr<HumanPlayer> humanPlayer = std::make_shared<HumanPlayer>();
     QVector<std::shared_ptr<Player>> players;
 };
