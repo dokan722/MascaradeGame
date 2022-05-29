@@ -310,6 +310,7 @@ QVector<int> ComputerPlayer::chooseTargets(int numOfTargets, QString reason, QVe
         {
             int rnd = QRandomGenerator::global()->bounded(reasonableTargets.size());
             targets.push_back(reasonableTargets[rnd]);
+            reasonableTargets.removeAt(rnd);
         }
     }
     return targets;
