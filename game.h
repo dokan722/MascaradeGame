@@ -22,7 +22,7 @@ protected:
 public:
     Player() {}
 
-    void assign(GameMaster *gm, int id)
+    virtual void assign(GameMaster *gm, int id)
     {
         gameMaster = gm;
         myId = id;
@@ -36,7 +36,7 @@ public:
     virtual void changeRoles(int playerId1, int playerId2) = 0;
     virtual QString chooseRoleToPlay() = 0;
     virtual QString answerWithRole() = 0;
-    virtual bool questionRole(QString role) = 0;
+    virtual bool questionRole(QString role, int playerid) = 0;
     virtual QVector<int> chooseTargets(int numOfTargets, QVector<int> *possibleTargets = nullptr) = 0;
     virtual void getOtherRole(int playerId, QString role) = 0;
     virtual void playerGetsMoney(int playerId, int amount) = 0;
@@ -49,7 +49,117 @@ public:
 
 class ComputerPlayer: public Player
 {
+    enum Type
+    {
+        TRYHARD,
+        TROLL,
+        INFORMATION,
+        SAFE,
+        STOPPER
+    };
+
+    QVector<QVector<double>> probability;
+    QVector<int> lastUpdate;
+    int time = 0;
+    int memoryTime = 0;
+    Type type;
+    QMap<Type, QVector<QString>> preferedRoles = {
+        {Type::TRYHARD, {"Inkwizytor", "Król", "Sędzia", "Królowa", "Wdowa"}},
+        {Type::TROLL, {"Błazen", "Szpieg", "Wiedźma"}},
+        {Type::INFORMATION, {"Szpieg", "Oszust"}},
+        {Type::SAFE, {"Wieśniak", "Biskup", "Sędzia", "Królowa", "Wdowa"}},
+        {Type::STOPPER, {"Inkwizytor", "Biskup", "Wiedźma", "Złodziej"}}
+    };
+
 public:
+
+    void assign(GameMaster *gm, int id) override;
+
+
+    void setBot(QString difficulty, int numberOfPlayers)
+    {
+        for (int i = 0; i < numberOfPlayers; ++i)
+        {
+            probability.push_back({0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0});
+            lastUpdate.push_back(time);
+        }
+        if (difficulty == "Łatwy")
+            memoryTime = 100;
+        else if (difficulty == "Średni")
+            memoryTime = 300;
+        else
+            memoryTime = 1000;
+        int randType = QRandomGenerator::global()->bounded(5);
+        if (randType == 0)
+            type = Type::TRYHARD;
+        else if (randType == 1)
+            type = Type::TROLL;
+        else if (randType == 2)
+            type = Type::INFORMATION;
+        else if (randType == 3)
+            type = Type::SAFE;
+        else
+            type = Type::STOPPER;
+    }
+
+    int roleToId(QString role)
+    {
+        if (role == "Sędzia")
+            return 0;
+        else if (role == "Biskup")
+            return 1;
+        else if (role == "Król")
+            return 2;
+        else if (role == "Błazen")
+            return 3;
+        else if (role == "Królowa")
+            return 4;
+        else if (role == "Złodziej")
+            return 5;
+        else if (role == "Wiedźma")
+            return 6;
+        else if (role == "Szpieg")
+            return 7;
+        else if (role == "Wieśniak")
+            return 8;
+        else if (role == "Oszust")
+            return 9;
+        else if (role == "Inkwizytor")
+            return 10;
+        else
+            return 11;
+    }
+
+    QString idToRole(int id)
+    {
+        if (id == 0)
+            return "Sędzia";
+        else if (id == 1)
+            return "Biskup";
+        else if (id == 2)
+            return "Król";
+        else if (id == 3)
+            return "Błazen";
+        else if (id == 4)
+            return "Królowa";
+        else if (id == 5)
+            return "Złodziej";
+        else if (id == 6)
+            return "Wiedźma";
+        else if (id == 7)
+            return "Szpieg";
+        else if (id == 8)
+            return "Wieśniak";
+        else if (id == 9)
+            return "Oszust";
+        else if (id == 10)
+            return "Inkwizytor";
+        else
+            return "Wdowa";
+    }
+
+    void checkMemory();
+
     QString saySomething(QString question, QStringList answers) override
     {
         return "foobar";
@@ -57,63 +167,30 @@ public:
     void notify(QVector<int>, QString) override
     {
     }
-    Decision chooseMove() override
-    {
-        return Decision::CHECK;
-    }
+    Decision chooseMove() override;
 
-    void checkSelf() override
-    {
+    void checkSelf() override;
 
-    }
+    void changeRoles(int playerId) override;
 
-    void changeRoles(int playerId) override
-    {
+    void changeRoles(int playerId1, int playerId2) override;
 
-    }
+    QString chooseRoleToPlay() override;
 
-    void changeRoles(int playerId1, int playerId2) override
-    {
+    QString answerWithRole() override;
 
-    }
+    bool questionRole(QString role, int playerId) override;
 
-    QString chooseRoleToPlay() override
-    {
-        return "Król";
-    }
+    QVector<int> chooseTargets(int numOfTargets, QVector<int> *possibleTargets = nullptr) override;
 
-    QString answerWithRole() override
-    {
-        return "Wieśniak";
-    }
-
-    bool questionRole(QString role) override
-    {
-        return false;
-    }
-
-    QVector<int> chooseTargets(int numOfTargets, QVector<int> *possibleTargets = nullptr) override
-    {
-        QVector<int> targets;
-        for (int i = 0; i < numOfTargets; ++i)
-            targets.push_back(0);
-        return targets;
-    }
-
-    void getOtherRole(int playerId, QString role) override
-    {
-
-    }
+    void getOtherRole(int playerId, QString role) override;
 
     void playerGetsMoney(int playerId, int amount) override
     {
 
     }
 
-    void potentialExchange(int playerId1, int playerId2) override
-    {
-
-    }
+    void potentialExchange(int playerId1, int playerId2) override;
 
     void cashExchange(int playerId1, int playerId2) override
     {
@@ -189,7 +266,7 @@ public:
     void changeRoles(int playerId1, int playerId2) override;
     QString chooseRoleToPlay() override;
     QString answerWithRole() override {return chooseRoleToPlay();}
-    bool questionRole(QString role) override;
+    bool questionRole(QString role, int playerId) override;
     QVector<int> chooseTargets(int numOfTargets, QVector<int> *possibleTargets = nullptr) override;
     void getOtherRole(int playerId, QString role) override;
     void playerGetsMoney(int playerId, int amount) override;
@@ -311,6 +388,7 @@ public:
             }
             else if (dec == Decision::USE)
             {
+                peasants = 1;
                 QString chosenRole = player->chooseRoleToPlay();
                 auto candidates = questionAll(chosenRole, currentPlayer);
                 candidates.push_back(currentPlayer);
@@ -426,7 +504,7 @@ public:
         {
             if (i != notTarget)
             {
-                if (players[i]->questionRole(role))
+                if (players[i]->questionRole(role, notTarget))
                     result.push_back(i);
             }
         }
