@@ -37,7 +37,7 @@ public:
     virtual QString chooseRoleToPlay() = 0;
     virtual QString answerWithRole() = 0;
     virtual bool questionRole(QString role, int playerid) = 0;
-    virtual QVector<int> chooseTargets(int numOfTargets, QVector<int> *possibleTargets = nullptr) = 0;
+    virtual QVector<int> chooseTargets(int numOfTargets, QString reason = "", QVector<int> *possibleTargets = nullptr) = 0;
     virtual void getOtherRole(int playerId, QString role) = 0;
     virtual void playerGetsMoney(int playerId, int amount) = 0;
     virtual void potentialExchange(int playerId1, int playerId2) = 0;
@@ -160,7 +160,7 @@ public:
 
     void checkMemory();
 
-    QString saySomething(QString question, QStringList answers) override
+    QString saySomething(QString, QStringList) override
     {
         return "foobar";
     }
@@ -181,28 +181,28 @@ public:
 
     bool questionRole(QString role, int playerId) override;
 
-    QVector<int> chooseTargets(int numOfTargets, QVector<int> *possibleTargets = nullptr) override;
+    QVector<int> chooseTargets(int numOfTargets, QString reason = "", QVector<int> *possibleTargets = nullptr) override;
 
     void getOtherRole(int playerId, QString role) override;
 
-    void playerGetsMoney(int playerId, int amount) override
+    void playerGetsMoney(int, int) override
     {
 
     }
 
     void potentialExchange(int playerId1, int playerId2) override;
 
-    void cashExchange(int playerId1, int playerId2) override
+    void cashExchange(int, int) override
     {
 
     }
 
-    void informDecision(int playerId, Decision dec) override
+    void informDecision(int, Decision) override
     {
 
     }
 
-    void informRoleClaim(int playerId, QString role) override
+    void informRoleClaim(int, QString) override
     {
 
     }
@@ -267,7 +267,7 @@ public:
     QString chooseRoleToPlay() override;
     QString answerWithRole() override {return chooseRoleToPlay();}
     bool questionRole(QString role, int playerId) override;
-    QVector<int> chooseTargets(int numOfTargets, QVector<int> *possibleTargets = nullptr) override;
+    QVector<int> chooseTargets(int numOfTargets, QString reason = "", QVector<int> *possibleTargets = nullptr) override;
     void getOtherRole(int playerId, QString role) override;
     void playerGetsMoney(int playerId, int amount) override;
     void potentialExchange(int playerId1, int playerId2) override;
@@ -366,7 +366,7 @@ public:
         }
         for (int i = 0; i < 4; ++i)
         {
-            int targetId = players[i]->chooseTargets(1)[0];
+            int targetId = players[i]->chooseTargets(1, "change")[0];
             players[i]->changeRoles(targetId);
             informAllPotentialExchange(i, targetId, i);
         }
@@ -382,7 +382,7 @@ public:
             }
             else if (dec == Decision::CHANGE)
             {
-                int targetId = player->chooseTargets(1)[0];
+                int targetId = player->chooseTargets(1, "change")[0];
                 player->changeRoles(targetId);
                 informAllPotentialExchange(currentPlayer, targetId, currentPlayer);
             }
@@ -416,12 +416,14 @@ public:
                         informAllMoney(i, -1);
                         addMoney(i, -1);
                     }
+                    bank += losers.size();
                 }
                 else
                     roleInstances[chosenRole]->usePower(currentPlayer);
             }
             currentPlayer = (currentPlayer + 1) % numberOfPlayers;
             printMoney();
+            emit playerTurnEnd(bank, playerMoney);
         }
         if (winCon < 13)
             humanPlayer->notify({cheater}, "Wygrana");
@@ -482,7 +484,7 @@ public:
         addMoney(to, amount);
     }
 
-    void informAllDecision(int playerId, Decision decision, int notTarget = -1)
+    void informAllDecision(int playerId, Decision decision, int = -1)
     {
         for (int i = 0; i < numberOfPlayers; ++i)
         {
@@ -546,6 +548,9 @@ public:
 public:
     std::shared_ptr<HumanPlayer> humanPlayer = std::make_shared<HumanPlayer>();
     QVector<std::shared_ptr<Player>> players;
+
+signals:
+    void playerTurnEnd(int, QList<int> money);
 };
 
 #endif // GAME_H

@@ -47,7 +47,7 @@ bool HumanPlayer::questionRole(QString role, int playerId)
     return false;
 }
 
-QVector<int> HumanPlayer::chooseTargets(int numOfTargets, QVector<int> *possibleTargets)
+QVector<int> HumanPlayer::chooseTargets(int numOfTargets, QString, QVector<int> *possibleTargets)
 {
     QVector<int> targets;
     QStringList posTargets;
@@ -83,7 +83,12 @@ void HumanPlayer::getOtherRole(int playerId, QString role)
 
 void HumanPlayer::playerGetsMoney(int playerId, int amount)
 {
-    notify({playerId}, "otrzymuje " + QString::number(amount) + " monet");
+    QString msg;
+    if (amount < 0)
+        msg = "traci " + QString::number(-amount) + " monet";
+    else
+       msg = "otrzymuje " + QString::number(amount) + " monet";
+    notify({playerId}, msg);
 }
 
 void HumanPlayer::potentialExchange(int playerId1, int playerId2)
@@ -245,24 +250,68 @@ bool ComputerPlayer::questionRole(QString role, int playerId)
     return false;
 }
 
-QVector<int> ComputerPlayer::chooseTargets(int numOfTargets, QVector<int> *possibleTargets)
+QVector<int> ComputerPlayer::chooseTargets(int numOfTargets, QString reason, QVector<int> *possibleTargets)
 {
     QVector<int> targets;
-    int value = QRandomGenerator::global()->bounded(gameMaster->numberOfPlayers);
-    auto richest = gameMaster->richest();
-    targets.push_back(gameMaster->richest()[value % richest.size()]);
-    if (numOfTargets > 1)
+    if (reason == "change")
     {
-        for (int i = 1; i < numOfTargets; ++i)
+        double maxProb = 0;
+        int target = (myId + 1) % gameMaster->numberOfPlayers;
+        for (QString role : preferedRoles[type])
         {
-            int num = gameMaster->numberOfPlayers;
-            for (int i = num - 1; i >= 0;  --i)
-                if (!targets.contains(i) && i != myId && gameMaster->playerMoney[i] < gameMaster->playerMoney[targets[0]])
-                    targets.push_back(i);
+            for (int i = 0; i < gameMaster->numberOfPlayers; ++i)
+            {
+                if (i != myId && probability[i][roleToId(role)] > maxProb)
+                {
+                    maxProb = probability[i][roleToId(role)];
+                    target = i;
+                }
+            }
+        }
+        targets.push_back(target);
+    }
+    else if (reason == "Bishop")
+    {
+        int rnd = QRandomGenerator::global()->bounded(possibleTargets->size());
+        int target = (*possibleTargets)[rnd];
+        targets.push_back(target);
+    }
+    else if (reason == "Spy")
+    {
+        int last = time;
+        int target = (myId + 1) % gameMaster->numberOfPlayers;
+        for (int i = 0; i < gameMaster->numberOfPlayers; ++i)
+        {
+            if (i != myId && last < lastUpdate[i])
+            {
+                last = lastUpdate[i];
+                target = i;
+            }
+        }
+        targets.push_back(target);
+    }
+    else
+    {
+        QVector<int> reasonableTargets;
+        for (int i = 0; i < gameMaster->numberOfPlayers; ++i)
+        {
+            if (i != myId && gameMaster->playerMoney[i] > gameMaster->playerMoney[myId])
+                reasonableTargets.push_back(i);
+        }
+        if (reasonableTargets.size() < numOfTargets)
+        {
+            for (int i = 0; i < gameMaster->numberOfPlayers; ++i)
+            {
+                if (i != myId)
+                    reasonableTargets.push_back(i);
+            }
+        }
+        for (int i = 0; i < numOfTargets; ++i)
+        {
+            int rnd = QRandomGenerator::global()->bounded(reasonableTargets.size());
+            targets.push_back(reasonableTargets[rnd]);
         }
     }
-    if (targets.size() != numOfTargets)
-        throw;
     return targets;
 }
 

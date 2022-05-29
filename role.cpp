@@ -4,7 +4,7 @@
 void Spy::usePower(int playerId)
 {
     auto player = gameMaster->players[playerId];
-    int target = player->chooseTargets(1)[0];
+    int target = player->chooseTargets(1, "Spy")[0];
     player->getOtherRole(target, gameMaster->playerRoles[target]);
     player->changeRoles(target);
     gameMaster->informAllPotentialExchange(playerId, target, playerId);
@@ -17,7 +17,7 @@ void Bishop::usePower(int playerId)
     int target;
     if (richest.size() > 1)
     {
-        target = player->chooseTargets(1, &richest)[0];
+        target = player->chooseTargets(1,"Bishop", &richest)[0];
     }
     else
         target = richest[0];
@@ -29,7 +29,7 @@ void Bishop::usePower(int playerId)
 void Fool::usePower(int playerId)
 {
     auto player = gameMaster->players[playerId];
-    auto targets = player->chooseTargets(2);
+    auto targets = player->chooseTargets(2, "Fool");
     player->changeRoles(targets[0], targets[1]);
     gameMaster->informAllPotentialExchange(targets[0], targets[1], playerId);
     gameMaster->informAllMoney(playerId, amount);
@@ -40,7 +40,7 @@ void Fool::usePower(int playerId)
 void Inquisitor::usePower(int playerId)
 {
     auto player = gameMaster->players[playerId];
-    int targetId = player->chooseTargets(1)[0];
+    int targetId = player->chooseTargets(1, "Inquisitor")[0];
     auto target = gameMaster->players[targetId];
     QString answer = target->answerWithRole();
     gameMaster->informAllClaimRole(targetId, answer);
@@ -85,7 +85,7 @@ void Roi::usePower(int playerId)
 void Witch::usePower(int playerId)
 {
     auto player = gameMaster->players[playerId];
-    int target = player->chooseTargets(1)[0];
+    int target = player->chooseTargets(1, "Witch")[0];
     gameMaster->informAllCashExchange(playerId, target);
     std::swap(gameMaster->playerMoney[playerId], gameMaster->playerMoney[target]);
 }
@@ -98,7 +98,7 @@ void Cheat::usePower(int playerId)
 
 void Widow::usePower(int playerId)
 {
-    gameMaster->playerMoney[playerId] = 10;
+    gameMaster->playerMoney[playerId] = std::max(10, gameMaster->playerMoney[playerId]);
 }
 
 void Thief::usePower(int playerId)
